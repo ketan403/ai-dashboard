@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>AI Vision Control</title>
+  <title>AI Vision Auto Detection</title>
 
   <script defer src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
 
@@ -11,6 +11,10 @@
       background: #0f172a;
       color: white;
       text-align: center;
+    }
+
+    h1 {
+      margin-top: 20px;
     }
 
     .container {
@@ -35,6 +39,7 @@
     #status {
       margin-top: 20px;
       font-size: 18px;
+      font-weight: bold;
     }
   </style>
 </head>
@@ -45,11 +50,13 @@
 
 <div class="container">
 
+  <!-- CAMERA -->
   <div class="panel">
     <h3>📷 Camera</h3>
-    <video id="cam" autoplay muted></video>
+    <video id="cam" autoplay muted playsinline></video>
   </div>
 
+  <!-- AI STATUS -->
   <div class="panel">
     <h3>🧠 AI Status</h3>
     <p id="status">Loading AI...</p>
@@ -61,17 +68,26 @@
   const video = document.getElementById("cam");
   const statusText = document.getElementById("status");
 
-  // Start camera
+  // 📷 START CAMERA
   navigator.mediaDevices.getUserMedia({ video: true })
-    .then(stream => video.srcObject = stream);
+    .then(stream => {
+      video.srcObject = stream;
+    })
+    .catch(() => {
+      alert("Camera permission denied!");
+    });
 
-  // Load AI model
-  Promise.all([
-    faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js/models')
-  ]).then(startAI);
+  // 🧠 LOAD MODELS (FIXED CDN)
+  async function loadModels() {
+    await faceapi.nets.tinyFaceDetector.loadFromUri(
+      'https://justadudewhohacks.github.io/face-api.js/models'
+    );
+    startAI();
+  }
 
+  // 🚀 START AI
   function startAI() {
-    statusText.innerText = "AI Ready";
+    statusText.innerText = "AI Ready 🚀";
 
     setInterval(async () => {
       const detections = await faceapi.detectAllFaces(
@@ -80,19 +96,25 @@
       );
 
       if (detections.length > 0) {
-        statusText.innerText = "FACE DETECTED";
+        statusText.innerText = "FACE DETECTED 😎";
         send(1);
       } else {
-        statusText.innerText = "NO FACE";
+        statusText.innerText = "NO FACE 😶";
         send(0);
       }
-    }, 2000);
+    }, 1500);
   }
 
+  // 📡 SEND TO ESP32
   function send(val) {
     fetch("http://192.168.29.222/data?face=" + val)
-      .catch(() => {});
+      .catch(() => {
+        console.log("ESP not reachable");
+      });
   }
+
+  // 🔥 INIT
+  loadModels();
 </script>
 
 </body>
