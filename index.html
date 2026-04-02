@@ -2,16 +2,15 @@
 <html>
 <head>
   <title>AI Vision Control</title>
+
+  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
+
   <style>
     body {
       font-family: Arial;
       background: #0f172a;
       color: white;
       text-align: center;
-    }
-
-    h1 {
-      margin-top: 20px;
     }
 
     .container {
@@ -25,7 +24,7 @@
       background: #1e293b;
       padding: 20px;
       border-radius: 15px;
-      width: 300px;
+      width: 320px;
     }
 
     video {
@@ -33,69 +32,66 @@
       border-radius: 10px;
     }
 
-    button {
-      padding: 15px;
-      margin: 10px;
-      border: none;
-      border-radius: 10px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-
-    .green {
-      background: #22c55e;
-    }
-
-    .red {
-      background: #ef4444;
+    #status {
+      margin-top: 20px;
+      font-size: 18px;
     }
   </style>
 </head>
 
 <body>
 
-<h1>🤖 AI Vision Dashboard</h1>
+<h1>🤖 AI Vision Auto Detection</h1>
 
 <div class="container">
 
-  <!-- CAMERA PANEL -->
   <div class="panel">
     <h3>📷 Camera</h3>
-    <video id="cam" autoplay playsinline></video>
+    <video id="cam" autoplay muted></video>
   </div>
 
-  <!-- CONTROL PANEL -->
   <div class="panel">
-    <h3>🎮 Control</h3>
-
-    <button class="green" onclick="send(1)">FACE DETECTED</button>
-    <button class="red" onclick="send(0)">NO FACE</button>
-
-    <p id="status">Status: Idle</p>
+    <h3>🧠 AI Status</h3>
+    <p id="status">Loading AI...</p>
   </div>
 
 </div>
 
 <script>
-  // CAMERA ACCESS
-  navigator.mediaDevices.getUserMedia({ video: true })
-    .then(stream => {
-      document.getElementById("cam").srcObject = stream;
-    })
-    .catch(err => {
-      alert("Camera permission denied!");
-    });
+  const video = document.getElementById("cam");
+  const statusText = document.getElementById("status");
 
-  // SEND DATA TO ESP
+  // Start camera
+  navigator.mediaDevices.getUserMedia({ video: true })
+    .then(stream => video.srcObject = stream);
+
+  // Load AI model
+  Promise.all([
+    faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js/models')
+  ]).then(startAI);
+
+  function startAI() {
+    statusText.innerText = "AI Ready";
+
+    setInterval(async () => {
+      const detections = await faceapi.detectAllFaces(
+        video,
+        new faceapi.TinyFaceDetectorOptions()
+      );
+
+      if (detections.length > 0) {
+        statusText.innerText = "FACE DETECTED";
+        send(1);
+      } else {
+        statusText.innerText = "NO FACE";
+        send(0);
+      }
+    }, 2000);
+  }
+
   function send(val) {
     fetch("http://192.168.29.222/data?face=" + val)
-      .then(res => res.text())
-      .then(data => {
-        document.getElementById("status").innerText = "Sent: " + val;
-      })
-      .catch(err => {
-        document.getElementById("status").innerText = "Error!";
-      });
+      .catch(() => {});
   }
 </script>
 
