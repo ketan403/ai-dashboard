@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>AI Vision Control</title>
+  <style>
+    body {
+      font-family: Arial;
+      background: #0f172a;
+      color: white;
+      text-align: center;
+    }
+
+    h1 {
+      margin-top: 20px;
+    }
+
+    .container {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      margin-top: 30px;
+    }
+
+    .panel {
+      background: #1e293b;
+      padding: 20px;
+      border-radius: 15px;
+      width: 300px;
+    }
+
+    video {
+      width: 100%;
+      border-radius: 10px;
+    }
+
+    button {
+      padding: 15px;
+      margin: 10px;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .green {
+      background: #22c55e;
+    }
+
+    .red {
+      background: #ef4444;
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>🤖 AI Vision Dashboard</h1>
+
+<div class="container">
+
+  <!-- CAMERA PANEL -->
+  <div class="panel">
+    <h3>📷 Camera</h3>
+    <video id="cam" autoplay playsinline></video>
+  </div>
+
+  <!-- CONTROL PANEL -->
+  <div class="panel">
+    <h3>🎮 Control</h3>
+
+    <button class="green" onclick="send(1)">FACE DETECTED</button>
+    <button class="red" onclick="send(0)">NO FACE</button>
+
+    <p id="status">Status: Idle</p>
+  </div>
+
+</div>
+
+<script>
+  // CAMERA ACCESS
+  navigator.mediaDevices.getUserMedia({ video: true })
+    .then(stream => {
+      document.getElementById("cam").srcObject = stream;
+    })
+    .catch(err => {
+      alert("Camera permission denied!");
+    });
+
+  // SEND DATA TO ESP
+  function send(val) {
+    fetch("http://192.168.29.222/data?face=" + val)
+      .then(res => res.text())
+      .then(data => {
+        document.getElementById("status").innerText = "Sent: " + val;
+      })
+      .catch(err => {
+        document.getElementById("status").innerText = "Error!";
+      });
+  }
+</script>
+
+</body>
+</html>
