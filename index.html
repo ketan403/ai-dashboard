@@ -22,18 +22,26 @@
       justify-content: center;
       gap: 40px;
       margin-top: 30px;
+      flex-wrap: wrap;
     }
 
     .panel {
       background: #1e293b;
       padding: 20px;
       border-radius: 15px;
-      width: 320px;
+      width: 340px;
+      position: relative;
     }
 
     video {
       width: 100%;
       border-radius: 10px;
+    }
+
+    canvas {
+      position: absolute;
+      top: 60px;
+      left: 20px;
     }
 
     #status {
@@ -68,6 +76,8 @@
   const video = document.getElementById("cam");
   const statusText = document.getElementById("status");
 
+  let lastSent = null; // avoid spam
+
   // 📷 START CAMERA
   navigator.mediaDevices.getUserMedia({ video: true })
     .then(stream => {
@@ -77,32 +87,62 @@
       alert("Camera permission denied!");
     });
 
-  // 🧠 LOAD MODELS (FIXED CDN)
+  // 🧠 LOAD MODELS (CDN — WORKS ANYWHERE)
   async function loadModels() {
-    await faceapi.nets.tinyFaceDetector.loadFromUri(
-      'https://justadudewhohacks.github.io/face-api.js/models'
-    );
-    startAI();
+    try {
+      await faceapi.nets.tinyFaceDetector.loadFromUri(
+        'https://justadudewhohacks.github.io/face-api.js/models'
+      );
+      startAI();
+    } catch (err) {
+      statusText.innerText = "AI failed to load ❌";
+      console.error(err);
+    }
   }
 
   // 🚀 START AI
   function startAI() {
     statusText.innerText = "AI Ready 🚀";
 
+    // create canvas for face box
+    const canvas = faceapi.createCanvasFromMedia(video);
+    document.querySelector(".panel").append(canvas);
+
+    const displaySize = { width: video.width, height: video.height };
+    faceapi.matchDimensions(canvas, displaySize);
+
     setInterval(async () => {
+
       const detections = await faceapi.detectAllFaces(
         video,
         new faceapi.TinyFaceDetectorOptions()
       );
 
+      const resized = faceapi.resizeResults(detections, displaySize);
+
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      faceapi.draw.drawDetections(canvas, resized);
+
       if (detections.length > 0) {
         statusText.innerText = "FACE DETECTED 😎";
-        send(1);
+
+        if (lastSent !== 1) {
+          send(1);
+          lastSent = 1;
+        }
+
       } else {
         statusText.innerText = "NO FACE 😶";
-        send(0);
+
+        if (lastSent !== 0) {
+          send(0);
+          lastSent = 0;
+        }
       }
-    }, 1500);
+
+    }, 800);
   }
 
   // 📡 SEND TO ESP32
